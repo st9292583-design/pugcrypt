@@ -1,0 +1,50 @@
+<!doctype html><html lang="uk"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Мопс і шифри</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f9f3e8;color:#38251e;font:17px system-ui}main{max-width:1080px;margin:auto;padding:32px 20px}header{display:flex;gap:25px;align-items:center;margin-bottom:30px}h1{font: bold clamp(40px,7vw,76px) Georgia;margin:0}header p{margin:8px 0}.pug{background:#e8bc85;width:130px;height:108px;border-radius:50%;position:relative;flex:none;border:5px solid #4c322b}.pug:before,.pug:after{content:'';position:absolute;background:#4c322b;width:33px;height:52px;top:-10px;border-radius:80%;z-index:0}.pug:before{left:-7px;transform:rotate(35deg)}.pug:after{right:-7px;transform:rotate(-35deg)}.face{position:absolute;inset:29px 20px 10px;text-align:center;font-size:30px;line-height:27px}.nose{display:block;background:#4c322b;border-radius:45%;color:#fff;width:62px;margin:auto;font-size:19px;padding:6px}nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}section{background:white;border:1px solid #dacaba;border-radius:22px;padding:22px}button,select,input,textarea{font:inherit}button,select{padding:9px 15px;border:1px solid #795e50;border-radius:12px;background:#fff;color:inherit;cursor:pointer}button[aria-pressed=true],button.primary{background:#57352c;color:white}textarea,input{border:1px solid #795e50;border-radius:10px;padding:10px;width:100%;margin:8px 0 12px}textarea{min-height:100px}output{display:block;background:#f9f3e8;padding:14px;border-radius:12px;overflow-wrap:anywhere;min-height:55px}pre{white-space:pre-wrap;overflow:auto;max-height:340px;font:14px monospace}footer{margin-top:20px;font-size:14px}@media(max-width:690px){.grid{grid-template-columns:1fr}.pug{transform:scale(.8);margin-left:-8px}}
+</style>
+<main><header><div class="pug" aria-hidden="true"><div class="face">● ●<span class="nose">ᴥ</span></div></div><div><h1>Мопс і шифри</h1><p>Криптографічна майстерня · варіант 28</p></div></header>
+<nav aria-label="Алгоритм"><button data-mode="caesar">Цезар</button><button data-mode="vigenere">Віженер ROT2</button><button data-mode="polybius">Полібій</button><button data-mode="rsa">RSA</button></nav>
+<div class="grid"><section><h2>Повідомлення</h2><label for="direction">Операція</label> <select id="direction"><option value="encrypt">Шифрування</option><option value="decrypt">Розшифрування</option></select>
+<p id="hint"></p><label for="message">Вхідні дані</label><textarea id="message"></textarea><div id="keybox"><label for="key" id="keylabel">Ключ</label><input id="key"></div>
+<button id="sample">Приклад варіанта</button> <button class="primary" id="run">Обчислити</button></section>
+<section><h2>Слід обчислень</h2><output id="result" aria-live="polite">Результат з’явиться тут.</output><pre id="steps"></pre><button id="save" disabled>Завантажити протокол</button></section></div>
+<footer>Ставісюк Олександра Сергіївна · Прикладна криптологія</footer></main>
+<script>
+const examples=__EXAMPLES__;
+const byId=id=>document.getElementById(id);
+let mode='caesar', protocol='';
+const hints={caesar:'Зсунь літеру в українській абетці на k позицій.',vigenere:'Для кожної літери за ключем знайди свій зсув і додай 2.',polybius:'Визнач рядок і стовпець у квадраті 6 × 6.',rsa:'Обчисли результат модульного піднесення до степеня.'};
+function sample(){
+ const decrypt=byId('direction').value==='decrypt';
+ byId('message').value=mode==='rsa'?(decrypt?examples.cipher:examples.message):(decrypt?'':examples.name);
+}
+function select(value){
+ mode=value;
+ document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===mode));
+ byId('hint').textContent=hints[mode];
+ byId('keybox').hidden=!['caesar','vigenere'].includes(mode);
+ byId('keylabel').textContent=mode==='caesar'?'Зсув k':'Ключове слово';
+ byId('key').value=mode==='caesar'?'5':examples.key;
+ sample();
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>select(b.dataset.mode));
+byId('sample').onclick=sample;
+byId('run').onclick=async()=>{
+ const run=byId('run');run.disabled=true;byId('save').disabled=true;byId('steps').textContent='';
+ try{
+  const response=await fetch('/calculate',{method:'POST',body:JSON.stringify({mode,text:byId('message').value,key:byId('key').value,reverse:byId('direction').value==='decrypt'})});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error);
+  byId('result').textContent=data.result;
+  byId('steps').textContent=data.steps.join('\n');
+  protocol=data.result+'\n\n'+data.steps.join('\n');byId('save').disabled=false;
+ }catch(error){byId('result').textContent=error.message}
+ finally{run.disabled=false}
+};
+byId('save').onclick=()=>{
+ const url=URL.createObjectURL(new Blob([protocol],{type:'text/plain;charset=utf-8'}));
+ const link=document.createElement('a');link.href=url;link.download='pugcrypt.txt';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+select(mode);
+</script></html>
