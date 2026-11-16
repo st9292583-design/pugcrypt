@@ -29,9 +29,19 @@ class Workshop:
     def __init__(self, root):
         self.root = root
         root.title("Мопс і шифри · Варіант 28")
-        root.geometry("900x650")
+        root.geometry("940x720")
         root.minsize(650, 560)
-        root.configure(bg="#f9f3e8")
+        root.configure(bg="#fff3f9")
+        style = ttk.Style(root)
+        style.theme_use("clam")
+        style.configure(".", font=("Segoe UI", 11), background="#fff3f9", foreground="#49243e")
+        style.configure("TButton", background="#f0ddff", borderwidth=0, padding=(12, 7))
+        style.map("TButton", background=[("active", "#e7c8fa")])
+        style.configure("Pug.TButton", background="#a73d77", foreground="#ffffff")
+        style.map("Pug.TButton", background=[("active", "#8e2d65")])
+        style.configure("TEntry", fieldbackground="#ffffff", padding=4)
+        style.configure("TCombobox", fieldbackground="#ffffff", padding=4)
+        style.configure("TCheckbutton", background="#fff3f9")
         self.mode = tk.StringVar(value="Цезар")
         self.reverse = tk.BooleanVar()
         self.key = tk.StringVar(value="5")
@@ -41,19 +51,19 @@ class Workshop:
         self.position = 0
         self.result = ""
 
-        banner = tk.Frame(root, bg="#f9f3e8")
-        banner.pack(fill="x", padx=22, pady=12)
-        pug = tk.Canvas(banner, width=98, height=84, bg="#f9f3e8", highlightthickness=0)
-        pug.pack(side="left")
-        pug.create_oval(5, 5, 30, 56, fill="#53362d", outline="")
-        pug.create_oval(68, 5, 93, 56, fill="#53362d", outline="")
-        pug.create_oval(17, 12, 81, 77, fill="#e8bc85", outline="#53362d", width=2)
-        for x in (34, 59):
-            pug.create_oval(x, 33, x + 7, 40, fill="#38251e", outline="")
-        pug.create_oval(31, 46, 67, 69, fill="#53362d", outline="")
-        pug.create_arc(40, 49, 58, 62, start=180, extent=180, outline="#fff4dd", width=2, style="arc")
-        tk.Label(banner, text="Мопс і шифри", font=("Segoe UI", 30, "bold"),
-                 bg="#f9f3e8", fg="#38251e").pack(side="left", padx=12)
+        banner = tk.Frame(root, bg="#f3ddfb")
+        banner.pack(fill="x", padx=22, pady=(15, 10))
+        self.pug = tk.Canvas(banner, width=161, height=135, bg="#f3ddfb", highlightthickness=0)
+        self.pug.pack(side="left", padx=(18, 10))
+        self.pug.bind("<Button-1>", lambda event: self.react("pet"))
+        banner_text = tk.Frame(banner, bg="#f3ddfb")
+        banner_text.pack(side="left", fill="x", expand=True, pady=12)
+        tk.Label(banner_text, text="Мопс і шифри", font=("Segoe UI", 32, "bold"),
+                 bg="#f3ddfb", fg="#49243e").pack(anchor="w")
+        self.guide = tk.StringVar()
+        tk.Label(banner_text, textvariable=self.guide, font=("Segoe UI", 12),
+                 bg="#f3ddfb", fg="#70335b", wraplength=480, justify="left").pack(anchor="w")
+        self.react("ready")
 
         form = ttk.Frame(root, padding=(22, 0, 22, 14))
         form.pack(fill="both", expand=True)
@@ -70,12 +80,12 @@ class Workshop:
         self.key_input = ttk.Entry(form, textvariable=self.key)
         self.key_input.pack(fill="x", pady=(3, 8))
         ttk.Label(form, text="Вхідні дані").pack(anchor="w")
-        self.message = tk.Text(form, height=3, wrap="word", font=("Segoe UI", 12))
+        self.message = tk.Text(form, height=3, wrap="word", bg="#ffffff", fg="#49243e", relief="flat", padx=10, pady=7, font=("Segoe UI", 12))
         self.message.pack(fill="x", pady=(3, 8))
-        ttk.Button(form, text="Обчислити", command=self.run).pack(anchor="w")
+        ttk.Button(form, text="Обчислити", style="Pug.TButton", command=self.run).pack(anchor="w")
         ttk.Label(form, textvariable=self.status, foreground="#8d4230").pack(anchor="w", pady=4)
         ttk.Label(form, text="Результат").pack(anchor="w")
-        self.output = tk.Text(form, height=3, wrap="word", state="disabled", font=("Segoe UI", 12))
+        self.output = tk.Text(form, height=3, wrap="word", state="disabled", bg="#faf0ff", fg="#49243e", relief="flat", padx=10, pady=7, font=("Segoe UI", 12))
         self.output.pack(fill="x", pady=(3, 8))
         row = ttk.Frame(form)
         row.pack(fill="x")
@@ -83,10 +93,44 @@ class Workshop:
         ttk.Button(row, text="Крок →", command=lambda: self.move(1)).pack(side="left", padx=5)
         ttk.Label(row, textvariable=self.counter).pack(side="left", padx=8)
         ttk.Button(row, text="Зберегти TXT", command=self.save).pack(side="right")
-        self.trace = tk.Text(form, height=3, wrap="word", state="disabled", font=("Consolas", 12))
+        self.trace = tk.Text(form, height=3, wrap="word", state="disabled", bg="#faf0ff", fg="#49243e", relief="flat", padx=10, pady=7, font=("Consolas", 12))
         self.trace.pack(fill="both", expand=True, pady=(8, 4))
         ttk.Label(form, text="Ставісюк Олександра Сергіївна · Варіант 28").pack(anchor="w")
         self.sample()
+
+    def react(self, mood):
+        messages = {
+            "ready": "Я Плюша! Обери шифр, а я покажу кожен крок.",
+            "pet": "Мурк… тобто гав! Спробуй «Приклад варіанта».",
+            "success": "Гав! Готово. Гортай кроки або збережи протокол.",
+            "error": "Ой, лапка зісковзнула. Підказка під кнопкою.",
+        }
+        self.guide.set(messages[mood])
+        c = self.pug
+        c.delete("all")
+        c.create_oval(20, 6, 142, 128, fill="#fff6fc", outline="")
+        c.create_oval(28, 88, 134, 133, fill="#f4b9d7", outline="")
+        c.create_oval(16, 28, 55, 95, fill="#5b3942", outline="")
+        c.create_oval(107, 28, 146, 95, fill="#5b3942", outline="")
+        c.create_oval(30, 19, 132, 116, fill="#efc797", outline="#9a655d", width=2)
+        for x in (52, 100):
+            if mood in ("success", "pet"):
+                c.create_arc(x-6, 51, x+8, 68, start=0, extent=180, style="arc", outline="#432733", width=3)
+            else:
+                c.create_oval(x-5, 51, x+7, 65, fill="#432733", outline="")
+                c.create_oval(x-1, 53, x+2, 56, fill="#fff9fd", outline="")
+            c.create_oval(x-10, 71, x+9, 80, fill="#e9a2a8", outline="")
+        c.create_arc(67, 28, 94, 46, start=20, extent=140, style="arc", outline="#bc8a71", width=2)
+        c.create_oval(58, 67, 104, 105, fill="#694655", outline="")
+        c.create_oval(73, 72, 90, 81, fill="#392632", outline="")
+        if mood == "error":
+            c.create_oval(77, 87, 86, 95, outline="#ffe6ed", width=2)
+        else:
+            c.create_arc(69, 77, 94, 95, start=180, extent=180, style="arc", outline="#ffe6ed", width=2)
+        c.create_polygon(106, 19, 97, 9, 97, 29, 106, 23, 117, 30, 117, 9, fill="#b44783")
+        c.create_oval(102, 16, 112, 26, fill="#f180b2", outline="")
+        if mood in ("success", "pet"):
+            c.create_text(145, 18, text="♥", fill="#ba4486", font=("Segoe UI", 15, "bold"))
 
     @staticmethod
     def show(widget, text):
@@ -105,7 +149,12 @@ class Workshop:
         if mode == "RSA":
             example = CIPHER if self.reverse.get() else MESSAGE
         elif self.reverse.get():
-            example = transform(mode, NAME, self.key.get(), False)[0]
+            try:
+                example = transform(mode, NAME, self.key.get(), False)[0]
+            except ValueError as error:
+                self.status.set(str(error))
+                self.react("error")
+                return
         else:
             example = NAME
         self.message.delete("1.0", "end")
@@ -119,8 +168,10 @@ class Workshop:
         except ValueError as error:
             self.result, self.steps = "", []
             self.status.set(str(error))
+            self.react("error")
         else:
             self.status.set("Готово")
+            self.react("success")
         self.position = 0
         self.show(self.output, self.result)
         self.move(0)
