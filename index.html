@@ -11,7 +11,47 @@
 <section><h2>Слід обчислень</h2><output id="result" aria-live="polite">Результат з’явиться тут.</output><pre id="steps"></pre><button id="save" disabled>Завантажити протокол</button></section></div>
 <footer>Ставісюк Олександра Сергіївна · Прикладна криптологія</footer></main>
 <script>
-const examples=__EXAMPLES__;
+const localExamples='__EXAMPLES__';
+const isHosted=localExamples.startsWith('__');
+const examples=isHosted ? {
+ name:'СТАВІСЮК ОЛЕКСАНДРА СЕРГІЇВНА', key:'МОПС', message:'2897878135', cipher:'20979746'
+} : JSON.parse(localExamples);
+let runtime;
+async function pythonRuntime(){
+ if(!runtime){
+  runtime=(async()=>{
+   const base='https://cdn.jsdelivr.net/pyodide/v0.27.7/full/';
+   await new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src=base+'pyodide.js';
+    script.onload=resolve;
+    script.onerror=()=>reject(Error('Не вдалося завантажити Python.'));
+    document.head.append(script);
+   });
+   const python=await loadPyodide({indexURL:base});
+   for(const name of ['ciphers.py','rsa_lab.py','engine.py']){
+    const response=await fetch('./'+name);
+    if(!response.ok)throw Error('Відсутній модуль '+name);
+    python.FS.writeFile(name,await response.text());
+   }
+   await python.runPythonAsync('from engine import calculate\nimport json');
+   return python;
+  })().catch(error=>{runtime=undefined;throw error});
+ }
+ return runtime;
+}
+async function getResult(input){
+ if(!isHosted){
+  const response=await fetch('/calculate',{method:'POST',body:JSON.stringify(input)});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error);
+  return data;
+ }
+ const python=await pythonRuntime();
+ python.globals.set('request_json',JSON.stringify(input));
+ const reply=await python.runPythonAsync('result, steps = calculate(json.loads(request_json))\njson.dumps(dict(result=result, steps=steps), ensure_ascii=False)');
+ return JSON.parse(reply);
+}
 const byId=id=>document.getElementById(id);
 let mode='caesar', protocol='';
 const hints={caesar:'Зсунь літеру в українській абетці на k позицій.',vigenere:'Для кожної літери за ключем знайди свій зсув і додай 2.',polybius:'Визнач рядок і стовпець у квадраті 6 × 6.',rsa:'Обчисли результат модульного піднесення до степеня.'};
@@ -33,9 +73,8 @@ byId('sample').onclick=sample;
 byId('run').onclick=async()=>{
  const run=byId('run');run.disabled=true;byId('save').disabled=true;byId('steps').textContent='';
  try{
-  const response=await fetch('/calculate',{method:'POST',body:JSON.stringify({mode,text:byId('message').value,key:byId('key').value,reverse:byId('direction').value==='decrypt'})});
-  const data=await response.json();
-  if(!response.ok)throw Error(data.error);
+  byId('result').textContent='Обчислюю…';
+  const data=await getResult({mode,text:byId('message').value,key:byId('key').value,reverse:byId('direction').value==='decrypt'});
   byId('result').textContent=data.result;
   byId('steps').textContent=data.steps.join('\n');
   protocol=data.result+'\n\n'+data.steps.join('\n');byId('save').disabled=false;

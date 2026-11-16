@@ -4,29 +4,10 @@ from pathlib import Path
 import json
 import os
 
-from ciphers import NAME, KEY, MESSAGE, CIPHER, substitute, vigenere, polybius
-from rsa_lab import rsa
+from ciphers import NAME, KEY, MESSAGE, CIPHER
+from engine import calculate
 
 ROOT = Path(__file__).resolve().parent
-
-
-def calculate(data):
-    value = data["text"].strip()
-    if not 0 < len(value) <= 1000:
-        raise ValueError("Довжина повідомлення має бути від 1 до 1000 символів.")
-    mode, reverse = data["mode"], data["reverse"]
-    if mode == "caesar":
-        shift = int(data.get("key", ""))
-        if not 0 <= shift <= 32:
-            raise ValueError("Зсув має бути від 0 до 32.")
-        return substitute(value, [shift], reverse)
-    if mode == "vigenere":
-        return vigenere(value, data.get("key", ""), reverse)
-    if mode == "polybius":
-        return polybius(value, reverse)
-    if mode == "rsa":
-        return rsa(value, reverse)
-    raise ValueError("Оберіть алгоритм.")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -40,7 +21,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/":
             examples = json.dumps(dict(name=NAME, key=KEY, message=MESSAGE, cipher=CIPHER), ensure_ascii=False)
-            html = (ROOT / "index.html").read_text(encoding="utf-8").replace("__EXAMPLES__", examples)
+            html = (ROOT / "index.html").read_text(encoding="utf-8").replace("'__EXAMPLES__'", json.dumps(examples, ensure_ascii=False))
             self.respond(html.encode(), "text/html; charset=utf-8")
         else:
             self.send_error(404)
